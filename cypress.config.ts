@@ -5,7 +5,7 @@ module.exports = defineConfig({
     setupNodeEvents(on, config) {
       // implement node event listeners here
     },
-    baseUrl: 'https://dog.ceo/',
+    baseUrl: 'https://dog.ceo',
     env: {
       yandexDiscConf: {
         baseUrl: '',

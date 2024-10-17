@@ -1,3 +1,5 @@
+import Chainable = Cypress.Chainable
+
 // Описание формата конфига для апи яндекса
 interface yandexConfig {
   baseUrl: string,
@@ -49,10 +51,11 @@ export class YandexDiscApi {
       if (response.status === 200) {
         cy.request({
           method: 'DELETE',
-          url: `${this.config.baseUrl}/v1/disk/resources?path=${path}&permanently=${isPermanently}`,
+          url: `${this.config.baseUrl}/v1/disk/resources?path=${path}&force_async=true&permanently=${isPermanently}`,
           headers: this.credentialHeaders
         }).then(response => {
-          expect(response.status).to.eq(204);
+          expect(response.status).to.eq(202);
+          this.waitOperationStatus(response.body.href, 'success', 30);
           cy.log(`Директория ${path} успешно удалена. Флаг permanently = ${isPermanently}`);
         })
       }
@@ -66,17 +69,17 @@ export class YandexDiscApi {
       url: `${this.config.baseUrl}/v1/disk/resources/upload?path=${path}&url=${url}`,
       headers: this.credentialHeaders
     }).then(response => {
-      // Ассерт реализован как неявное цикличное ожидание успешного статуса загрузки потому что запрос возвращает ссылку на асинхронную операцию, а сайпрес такое не любит
-      this.waitFileUploadStatus(response.body.href, 'success', timeoutSec);
+      // Ассерт реализован как неявное цикличное ожидание успешного статуса потому что запрос возвращает ссылку на асинхронную операцию, а сайпрес такое не любит
+      this.waitOperationStatus(response.body.href, 'success', timeoutSec);
     })
   }
 
-  // Рекурсивное неявное ожидание статуса в теле запроса с таймером
-  private waitFileUploadStatus(url: string, expectedResult: string, timeoutSec: number) {
-    this.waitFileUploadStatusInt(url, expectedResult, 1, timeoutSec);
+  // Рекурсивное неявное ожидание статуса асинхронной операции в теле запроса с таймером
+  private waitOperationStatus(url: string, expectedResult: string, timeoutSec: number) {
+    this.waitOperationStatusInt(url, expectedResult, 1, timeoutSec);
   }
 
-  private waitFileUploadStatusInt (url: string, expectedResult: string, counter: number, timeoutSec: number) {
+  private waitOperationStatusInt (url: string, expectedResult: string, counter: number, timeoutSec: number) {
     if (counter > timeoutSec) {
       throw new Error(`Ожидаемый статус ${expectedResult} не получен`);
     }
@@ -84,16 +87,51 @@ export class YandexDiscApi {
       method: 'GET',
       url: url,
       headers: this.credentialHeaders
-    }).then(result => {
-      if (expectedResult !== result.body.status) {
+    }).then(response => {
+      if (expectedResult !== response.body.status) {
         cy.log(`Ждем статус ${expectedResult}. Итерация: ${counter}`);
-        cy.log(`Текущий статус ${result.body.status}`);
+        cy.log(`Текущий статус ${response.body.status}`);
         cy.wait(1000);
-        this.waitFileUploadStatusInt(url, expectedResult, counter + 1, timeoutSec);
+        this.waitOperationStatusInt(url, expectedResult, counter + 1, timeoutSec);
       } else {
-        cy.log(`Найден статус ${result.body.status}`);
+        cy.log(`Найден статус ${response.body.status}`);
         return;
       }
     })
   }
+
+}
+
+export class DogCeoApi {
+
+  getSubBreeds(breed: string) : Chainable<string[]> {
+    return cy.request({
+      method: 'GET',
+      url: `/api/breed/${breed}/list`
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      return response.body.message;
+    })
+  }
+
+  getSubBreedRandomImageLink(breed: string, subBreed: string) : Chainable<string> {
+    return cy.request({
+      method: 'GET',
+      url: `/api/breed/${breed}/${subBreed}/images/random`
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      return response.body.message;
+    })
+  }
+
+  getBreedRandomImageLink(breed: string) : Chainable<string> {
+    return cy.request({
+      method: 'GET',
+      url: `/api/breed/${breed}/images/random`
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      return response.body.message;
+    })
+  }
+
 }
