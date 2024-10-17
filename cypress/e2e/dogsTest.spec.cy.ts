@@ -9,7 +9,7 @@ describe('Dogs spec', () => {
   before(() => {
     const yandexDiscApi = new YandexDiscApi();
     yandexDiscApi.deleteFolder(path)
-      .createFolder(path)
+      .createFolder(path);
   })
 
   it('Dogs test', () => {
@@ -19,14 +19,20 @@ describe('Dogs spec', () => {
 
     dogCeoApi.getSubBreeds(randomBreed).then(subBreeds => {
       if (subBreeds.length) {
-        subBreeds.forEach(subBreed => {
+        subBreeds.forEach((subBreed, index) => {
           dogCeoApi.getSubBreedRandomImageLink(randomBreed, subBreed).then(link => {
-            yandexDiscApi.uploadFileViaUrl(`${path}/${subBreed}`, link, 20);
+            yandexDiscApi.uploadFileViaUrl(`${path}/${subBreed}`, link, 20)
+              .getFilesInFolder(path, 'created').then(items => {
+                expect(items[index].name).to.eq(subBreed);
+              })
           })
         }) 
       } else {
         dogCeoApi.getBreedRandomImageLink(randomBreed).then(link => {
-          yandexDiscApi.uploadFileViaUrl(`${path}/${randomBreed}`, link, 20);
+          yandexDiscApi.uploadFileViaUrl(`${path}/${randomBreed}`, link, 20)
+            .getFilesInFolder(path, 'created').then(items => {
+              expect(items[0].name).to.eq(randomBreed);
+            })
         })
       }
     })

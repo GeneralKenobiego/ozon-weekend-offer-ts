@@ -21,6 +21,10 @@ export class YandexDiscApi {
     }
   }
 
+  /**
+   * Создает директорию
+   * @param path - путь до директории
+  **/
   createFolder(path: string) { 
     cy.request({
       method: 'PUT',
@@ -34,10 +38,25 @@ export class YandexDiscApi {
   }
 
   /**
-   * Если директория существует, то она будет удалена
+   * Возвращает метаданные указанной директории и файлов в ней
+   * @param path - путь до директории
+   * @param sortBy - поле для сортировки
+  **/
+  getFilesInFolder(path: string, sortBy: string) : Chainable<any[]> {
+    return cy.request({
+      method: 'GET',
+      url: `${this.config.baseUrl}/v1/disk/resources?path=${path}&sort=${sortBy}`,
+      headers: this.credentialHeaders
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      return response.body._embedded.items;
+    })
+  }
+
+  /**
+   * Удаление директории если она существует
    * @param path - путь до директории
    * @param permanently - флаг полного удаления. True - удалить полностью. False - удалить в корзину
-   * 
   **/
   deleteFolder(path: string, permanently?: boolean) {
     const isPermanently = permanently || true;
@@ -63,6 +82,12 @@ export class YandexDiscApi {
     return this;
   }
 
+  /**
+   * Загрузка файла из указанной ссылки
+   * @param path - путь до директории + имя создаваемого файла
+   * @param url - адрес загружаемого файла
+   * @param timeoutSec - кол-во попыток\максимальное время ожидания статуса
+  **/
   uploadFileViaUrl(path: string, url: string, timeoutSec: number) {
     cy.request({
       method: 'POST',
@@ -72,9 +97,15 @@ export class YandexDiscApi {
       // Ассерт реализован как неявное цикличное ожидание успешного статуса потому что запрос возвращает ссылку на асинхронную операцию, а сайпрес такое не любит
       this.waitOperationStatus(response.body.href, 'success', timeoutSec);
     })
+    return this;
   }
 
-  // Рекурсивное неявное ожидание статуса асинхронной операции в теле запроса с таймером
+  /**
+   * Рекурсивное неявное ожидание статуса асинхронной операции с таймером
+   * @param url - ссылку на асинхронную операцию
+   * @param expectedResult - ожидаемый статус
+   * @param timeoutSec - кол-во попыток\максимальное время ожидания статуса
+  **/
   private waitOperationStatus(url: string, expectedResult: string, timeoutSec: number) {
     this.waitOperationStatusInt(url, expectedResult, 1, timeoutSec);
   }
@@ -104,6 +135,10 @@ export class YandexDiscApi {
 
 export class DogCeoApi {
 
+  /**
+   * Возвращает массив подпород
+   * @param breed - порода
+  **/
   getSubBreeds(breed: string) : Chainable<string[]> {
     return cy.request({
       method: 'GET',
@@ -114,6 +149,11 @@ export class DogCeoApi {
     })
   }
 
+  /**
+   * Возвращает ссылку на рандомное фото подпороды
+   * @param breed - порода
+   * @param subBreed - подпорода
+  **/
   getSubBreedRandomImageLink(breed: string, subBreed: string) : Chainable<string> {
     return cy.request({
       method: 'GET',
@@ -124,6 +164,10 @@ export class DogCeoApi {
     })
   }
 
+  /**
+   * Возвращает ссылку на рандомное фото породы
+   * @param breed - порода
+  **/
   getBreedRandomImageLink(breed: string) : Chainable<string> {
     return cy.request({
       method: 'GET',
